@@ -74,26 +74,31 @@
         }
 
         function enseignerIA() {
-            const q = document.getElementById("apprendreQ").value.trim();
-            const r = document.getElementById("apprendreR").value.trim();
-            if(!q || !r) return alert("Veuillez remplir les deux champs de saisie !");
+    const q = document.getElementById("apprendreQ").value.trim();
+    const r = document.getElementById("apprendreR").value.trim();
+    if(!q || !r) return alert("Veuillez remplir les deux champs de saisie !");
 
-            fetch(`${API_URL}/apprendre`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ question: q, reponse: r })
-            })
-            .then(res => {
-                if(!res.ok) throw new Error("Échec de l'insertion");
-                return res.json();
-            })
-            .then(data => {
-                alert("Félicitations, la nouvelle connaissance a été stockée avec succès !");
-                document.getElementById("apprendreQ").value = "";
-                document.getElementById("apprendreR").value = "";
-            })
-            .catch(err => alert("Erreur lors de la sauvegarde : vérifiez vos configurations."));
-        }
+    // On envoie le mot de passe dans l'en-tête "X-Admin-Secret"
+    fetch(`${API_URL}/apprendre`, {
+        method: 'POST',
+        headers: { 
+            'Content-Type': 'application/json',
+            'X-Admin-Secret': 'ChoisisUnSuperMotDePasseIci123!' // 👈 METS LE MEME MOT DE PASSE ICI
+        },
+        body: JSON.stringify({ question: q, reponse: r })
+    })
+    .then(res => {
+        if(res.status === 403) throw new Error("Mot de passe admin incorrect !");
+        if(!res.ok) throw new Error("Échec de l'insertion");
+        return res.json();
+    })
+    .then(data => {
+        alert("Félicitations, la nouvelle connaissance a été stockée avec succès !");
+        document.getElementById("apprendreQ").value = "";
+        document.getElementById("apprendreR").value = "";
+    })
+    .catch(err => alert("Erreur lors de la sauvegarde : " + err.message));
+}
 
         // Permet de valider en appuyant sur la touche "Entrée" du clavier
         document.getElementById("userInput").addEventListener("keypress", function(event) {

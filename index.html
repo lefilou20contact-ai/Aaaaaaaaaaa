@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panneau d'Éducation - Mon IA</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 650px; margin: 40px auto; padding: 20px; background: #1e1e2e; color: #cdd6f4; }
+        h2 { margin-top: 0; color: #f5c2e7; }
+        .box { background: #313244; padding: 20px; border-radius: 8px; margin-bottom: 25px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        input, button { width: 100%; padding: 12px; margin-top: 8px; border-radius: 6px; border: none; box-sizing: border-box; font-size: 14px; }
+        input { background: #45475a; color: white; transition: background 0.3s; }
+        input:focus { background: #585b70; outline: 2px solid #cba6f7; }
+        button { background: #a6e3a1; color: #11111b; font-weight: bold; cursor: pointer; margin-top: 15px; transition: opacity 0.2s; }
+        button:hover { opacity: 0.9; }
+        #chatbox { height: 250px; overflow-y: auto; background: #11111b; padding: 15px; border-radius: 6px; margin-bottom: 10px; border: 1px solid #45475a; }
+        p { margin: 8px 0; line-height: 1.4; }
+        small { font-size: 11px; margin-left: 5px; }
+    </style>
+</head>
+<body>
+
+    <h2>🤖 Discussion en Direct</h2>
+    <div class="box">
+        <div id="chatbox">
+            <p style="color: #6c7086"><i>Le système est prêt. Écris un message pour tester la réactivité...</i></p>
+        </div>
+        <input type="text" id="userInput" placeholder="Posez une question à votre IA...">
+        <button onclick="envoyerMessage()">Envoyer le message</button>
+    </div>
+
+    <h2>💡 Salle d'Apprentissage Actif (Supabase)</h2>
+    <div class="box">
+        <p style="color: #a6adc8; margin-bottom: 10px;">Si votre IA n'a pas su répondre à une question, associez manuellement le déclencheur et la réponse ici :</p>
+        <input type="text" id="apprendreQ" placeholder="Si l'utilisateur tape précisément la phrase...">
+        <input type="text" id="apprendreR" placeholder="L'IA devra répliquer par la phrase...">
+        <button onclick="enseignerIA()" style="background: #89b4fa;">Ancrer cette donnée dans le Cloud</button>
+    </div>
+
+    <script>
+        // METS ICI TON URL DE CLOUDFLARE WORKER DES QUE TU L'AS DEPLOYE
+        const API_URL = "https://mon-ia-chatbot.ton-pseudo.workers.dev";
+
+        function envoyerMessage() {
+            const input = document.getElementById("userInput");
+            const chatbox = document.getElementById("chatbox");
+            if(!input.value.trim()) return;
+
+            // Affichage instantané du message utilisateur
+            chatbox.innerHTML += `<p style="color: #89b4fa"><b>Toi :</b> ${input.value}</p>`;
+            const texteEnvoye = input.value;
+            input.value = "";
+            chatbox.scrollTop = chatbox.scrollHeight;
+            
+            // Transmission au Cloudflare Worker
+            fetch(`${API_URL}/chat`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: texteEnvoye })
+            })
+            .then(res => {
+                if(!res.ok) throw new Error("Erreur de communication avec le serveur");
+                return res.json();
+            })
+            .then(data => {
+                const scoreInfo = data.match_score ? `<small style="color:#6c7086">(confiance: ${data.match_score})</small>` : '';
+                chatbox.innerHTML += `<p style="color: #a6e3a1"><b>IA :</b> ${data.reply} ${scoreInfo}</p>`;
+                chatbox.scrollTop = chatbox.scrollHeight;
+            })
+            .catch(err => {
+                chatbox.innerHTML += `<p style="color: #f38ba8"><b>Système :</b> Échec de la connexion. Vérifiez l'URL de votre API.</p>`;
+                chatbox.scrollTop = chatbox.scrollHeight;
+            });
+        }
+
+        function enseignerIA() {
+            const q = document.getElementById("apprendreQ").value.trim();
+            const r = document.getElementById("apprendreR").value.trim();
+            if(!q || !r) return alert("Veuillez remplir les deux champs de saisie !");
+
+            fetch(`${API_URL}/apprendre`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ question: q, reponse: r })
+            })
+            .then(res => {
+                if(!res.ok) throw new Error("Échec de l'insertion");
+                return res.json();
+            })
+            .then(data => {
+                alert("Félicitations, la nouvelle connaissance a été stockée avec succès !");
+                document.getElementById("apprendreQ").value = "";
+                document.getElementById("apprendreR").value = "";
+            })
+            .catch(err => alert("Erreur lors de la sauvegarde : vérifiez vos configurations."));
+        }
+
+        // Permet de valider en appuyant sur la touche "Entrée" du clavier
+        document.getElementById("userInput").addEventListener("keypress", function(event) {
+            if (event.key === "Enter") {
+                envoyerMessage();
+            }
+        });
+    </script>
+</body>
+</html>
